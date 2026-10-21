@@ -1,0 +1,203 @@
+{
+  "fecha_utc": "2026-10-21T15:57:02.033Z",
+  "runtime": "v24.19.0",
+  "sha256_fuente": "d89786062885bc5dc4177e1f6c8d101a12097632a87b883ac3f06de5f521deb1",
+  "alcance": "Funciones JavaScript originales con items y $input simulados; no ejecuta n8n, SQL ni correo.",
+  "total": 12,
+  "aprobadas": 7,
+  "fallidas": 5,
+  "errores": 0,
+  "casos": [
+    {
+      "id": "CP-01",
+      "node": "Normalizar fechas de vigencia",
+      "input": {
+        "fecha_inicio_base": "2026-03-05T00:00:00Z"
+      },
+      "output": {
+        "fecha_inicio_sql": "2026-03-05"
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-02",
+      "node": "Normalizar fechas de vigencia",
+      "input": {
+        "fecha_inicio_base": null
+      },
+      "output": {
+        "fecha_inicio_sql": null
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-03",
+      "node": "Normalizar fechas de vigencia",
+      "input": {
+        "fecha_inicio_base": "2026-02-31"
+      },
+      "output": {
+        "fecha_inicio_sql": "2026-02-31"
+      },
+      "status": "Fallida local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-04",
+      "node": "Validar propuesta de plan",
+      "input": {
+        "pro_codigo": "PRUEBA-001",
+        "pro_version": 1,
+        "numero_mes": 1,
+        "inf_tipo_propuesto": 2,
+        "fecha_inicio_propuesta": "2026-01-01",
+        "fecha_corte_propuesta": "2026-01-31",
+        "fecha_entrega_propuesta": "2026-02-20"
+      },
+      "output": {
+        "propuesta_valida": true
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-05",
+      "node": "Validar propuesta de plan",
+      "input": {
+        "pro_codigo": "PRUEBA-001",
+        "pro_version": 1,
+        "numero_mes": 1,
+        "inf_tipo_propuesto": 2,
+        "fecha_inicio_propuesta": "2026-01-01",
+        "fecha_corte_propuesta": "2026-01-31",
+        "fecha_entrega_propuesta": null
+      },
+      "output": {
+        "propuesta_valida": false,
+        "errores": "No se calculó la fecha de entrega con el calendario institucional."
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-06",
+      "node": "Preparar correcciones mensuales",
+      "input": {
+        "inf_estado": 2,
+        "inf_fecha_corte": "2026-01-15"
+      },
+      "output": {
+        "accion": "SIN_CAMBIOS",
+        "corte": "2026-01-15"
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-07",
+      "node": "Preparar correcciones mensuales",
+      "input": {
+        "inf_estado": 1,
+        "inf_fecha_corte": "2026-01-15"
+      },
+      "output": {
+        "accion": "ACTUALIZAR_FECHA_CORTE",
+        "corte": "2026-01-31"
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-08",
+      "node": "Calcular siguiente informe mensual",
+      "input": {
+        "fecha_termino": null,
+        "ultima_fecha_corte": "2026-01-31"
+      },
+      "output": {
+        "plan_finalizado": true,
+        "motivo": "El proyecto ya alcanzó o superó su fecha oficial de término."
+      },
+      "status": "Fallida local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-09",
+      "node": "Calcular siguiente informe mensual",
+      "input": {
+        "fecha_termino": "2026-12-31",
+        "ultima_fecha_corte": "2026-01-31",
+        "ultimo_inf_numero": 1
+      },
+      "output": {
+        "corte": "2026-03-03",
+        "entrega": "2026-03-18"
+      },
+      "status": "Fallida local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-10",
+      "node": "Calcular siguiente informe mensual",
+      "input": {
+        "fecha_termino": "2026-12-31",
+        "ultima_fecha_corte": "2026-12-31"
+      },
+      "output": {
+        "plan_finalizado": true
+      },
+      "status": "Aprobada local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-11",
+      "node": "Calcular entregas mensuales provisionales",
+      "input": {
+        "inf_tipo_propuesto": 4,
+        "fecha_entrega_propuesta": "2026-02-20",
+        "fecha_entrega_final_base": "2026-03-15"
+      },
+      "output": {
+        "entrega": "2026-02-20",
+        "metodo": "PLAZO_FINAL_EXISTENTE"
+      },
+      "status": "Fallida local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    },
+    {
+      "id": "CP-12",
+      "node": "Validar propuesta de plan",
+      "input": {
+        "pro_codigo": "PRUEBA-001",
+        "pro_version": 1,
+        "numero_mes": 1,
+        "inf_tipo_propuesto": 2,
+        "fecha_inicio_propuesta": "2026-01-01",
+        "fecha_corte_propuesta": "2026-01-31",
+        "fecha_entrega_propuesta": "2026-02-20",
+        "modo_simulacion": true,
+        "aplicar_cambio": false
+      },
+      "output": {
+        "modo_simulacion": false,
+        "aplicar_cambio": true
+      },
+      "status": "Fallida local",
+      "date": "2026-10-21",
+      "scope": "JavaScript aislado del JSON; sin n8n, SQL ni correo"
+    }
+  ]
+}

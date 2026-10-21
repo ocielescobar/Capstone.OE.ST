@@ -1,0 +1,10 @@
+﻿Nodo;Archivo fuente;EXEC activo sin comentarios;Naturaleza observada;Verificación
+Obtener fechas base del proyecto;Nodos SQL/03_Obtener_fechas_base_del_proyecto.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Obtener informes actuales;Nodos SQL/04_Obtener_informes_actuales.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Generar propuesta mensual;Nodos SQL/05_Generar_propuesta_mensual.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Aplicar corrección mensual PID;Nodos SQL/09_Aplicar_correccion_mensual_PID.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Crear PID en Base de Datos;Nodos SQL/17_Crear_PID_en_Base_de_Datos.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Validar colisiones antes de crear PID;Nodos SQL/18_Validar_colisiones_antes_de_crear_PID.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Consultar adjudicados R2 pendientes;Nodos SQL/25_Consultar_adjudicados_R2_pendientes.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Obtener último informe;Nodos SQL/30_Obtener_ultimo_informe.sql;No;Consulta o SELECT de simulación;No ejecutado en SQL Server
+Microsoft SQL;Nodos SQL/33_Microsoft_SQL.sql;No;Transacción vacía;No ejecutado en SQL Server

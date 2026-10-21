@@ -1,0 +1,9 @@
+﻿ID;Verificación;Archivo o caso relacionado;Esperado;Obtenido real;Estado;Fecha real;Evidencia real;Responsable
+BD-01;Servidor y base del ambiente;Script 01;Ambiente de prueba confirmado;No ejecutado;Pendiente;;;Equipo
+BD-02;Existencia y columnas de objetos;Script 01;Catálogo real exportado;No ejecutado;Pendiente;;;Equipo
+BD-03;Claves y relaciones físicas;Script 01;PK, unicidad y FK confirmadas o ausencia documentada;No ejecutado;Pendiente;;;Equipo
+BD-04;Contrato de procedimientos;Script 01;Parámetros comparados con nodos;No ejecutado;Pendiente;;;Equipo
+BD-05;Antes y después de simulación;Script 02 / CP-18;Sin cambios persistidos;No ejecutado;Pendiente;;;Equipo
+BD-06;Duplicados por proyecto versión número;Script 02 / CP-20;Cero duplicados;No ejecutado;Pendiente;;;Equipo
+BD-07;Quince días hábiles y cobertura;Script 02 / CP-16 CP-17;Entrega exacta o bloqueo por cobertura;No ejecutado;Pendiente;;;Equipo
+BD-08;Informes tramitados conservados;"CP-06 local; integración pendiente";Cero modificación de informes no pendientes;No ejecutado en SQL;Pendiente;;;Equipo

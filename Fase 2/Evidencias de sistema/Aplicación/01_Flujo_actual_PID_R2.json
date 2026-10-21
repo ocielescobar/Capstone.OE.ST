@@ -1,0 +1,1776 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "1ddbc662-5986-402a-94ae-c9910a2f1826",
+      "name": "Cada mañana a las 7 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -128,
+        -800
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion_pid }}",
+                    "rightValue": "CREAR_PLAN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "63c6f94b-e3bc-42fe-ad62-0584fdfbf541"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Crear plan"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2333cf49-a391-411e-a881-d2a571df9c8b",
+                    "leftValue": "={{ $json.accion_pid }}",
+                    "rightValue": "CONFIGURAR_PLAN_EXISTENTE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Configurar plan mensual"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -192
+      ],
+      "id": "1ca3fed2-c7c3-4eda-b09e-d80c7b32aedb",
+      "name": "Enrutar acción PID",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DECLARE @Proyecto nvarchar(30) =\n    N'{{ $json.pro_codigo }}';\n\nDECLARE @Version int =\n    {{ $json.pro_version }};\n\nSELECT\n    px.pro_codigo,\n    px.pro_codigo_humano,\n    px.pro_version,\n    px.pro_estado AS estado_proyecto_real,\n    px.pro_formalizaciones,\n\n    px.pro_fecha_inicio,\n    px.pro_fecha_termino,\n    px._pro_fecha_inicio_oficial,\n    px._pro_fecha_termino_oficial,\n\n    pv.ver_fecha_inicio,\n    pv.ver_fecha_termino,\n    pv.ver_fecha_inicio_oficial,\n    pv.ver_fecha_termino_oficial,\n    pv.ver_resolucion_fecha,\n\n    COALESCE(\n        pv.ver_fecha_inicio_oficial,\n        px._pro_fecha_inicio_oficial,\n        px.pro_fecha_inicio\n    ) AS fecha_inicio_base,\n\n    COALESCE(\n        pv.ver_fecha_termino_oficial,\n        px._pro_fecha_termino_oficial,\n        px.pro_fecha_termino\n    ) AS fecha_termino_base,\n\n    DATEFROMPARTS(\n        YEAR(\n            COALESCE(\n                pv.ver_fecha_inicio_oficial,\n                px._pro_fecha_inicio_oficial,\n                px.pro_fecha_inicio\n            )\n        ),\n        MONTH(\n            COALESCE(\n                pv.ver_fecha_inicio_oficial,\n                px._pro_fecha_inicio_oficial,\n                px.pro_fecha_inicio\n            )\n        ),\n        1\n    ) AS primer_mes_plan,\n\n    final.inf_numero AS numero_informe_final_existente,\n    final.inf_fecha_corte AS fecha_corte_final_existente,\n    final.inf_entrega_programada AS fecha_entrega_final_base,\n\n    CAST(\n        CASE\n            WHEN final.inf_entrega_programada IS NOT NULL\n                THEN 1\n            ELSE 0\n        END\n        AS bit\n    ) AS plazo_final_disponible,\n\n    CAST(1 AS bit) AS modo_prueba\n\nFROM dbo.PROYECTOS_X AS px\n\nLEFT JOIN dbo.PROYECTO_VERSIONES AS pv\n    ON pv.ver_proyecto_codigo = px.pro_codigo\n   AND pv.ver_proyecto_version = @Version\n\nOUTER APPLY\n(\n    SELECT TOP (1)\n        i.inf_numero,\n        i.inf_fecha_corte,\n        i.inf_entrega_programada\n    FROM dbo.PROYECTO_INFORME AS i\n    WHERE i.inf_proyecto_codigo = px.pro_codigo\n      AND i.inf_proyecto_version = @Version\n      AND i.inf_tipo = 4\n    ORDER BY\n        CASE\n            WHEN i.inf_entrega_programada IS NULL THEN 1\n            ELSE 0\n        END,\n        i.inf_numero DESC\n) AS final\n\nWHERE px.pro_codigo = @Proyecto\n  AND px.pro_version = @Version;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        -352
+      ],
+      "id": "0495c2c8-a676-4a9b-9433-b400bd0b4e18",
+      "name": "Obtener fechas base del proyecto",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DECLARE @Proyecto nvarchar(30) = NULLIF(LTRIM(RTRIM(N'{{ $json.pro_codigo }}')), N'');\nDECLARE @Version int = TRY_CONVERT(int, N'{{ $json.pro_version }}');\n\nSELECT \n    i.inf_proyecto_codigo AS pro_codigo,\n    i.inf_proyecto_version AS pro_version,\n    i.inf_numero,\n    i.inf_tipo,\n    ti.tpi_descripcion AS tipo_informe,\n    ti.tpi_permite_cuota,\n    ti.tpi_subsidio,\n    ti.tpi_solicitud_financiera,\n    i.inf_estado,\n    i.inf_fecha_corte,\n    i.inf_nombre\nFROM dbo.PROYECTO_INFORME AS i\nLEFT JOIN dbo.TIPO_INFORME AS ti \n    ON ti.tpi_codigo = i.inf_tipo\nWHERE i.inf_proyecto_codigo = @Proyecto \n  AND i.inf_proyecto_version = @Version\nORDER BY i.inf_numero ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        -128
+      ],
+      "id": "0a0f11f4-9b49-49b8-ba0a-d18c5c5aabe9",
+      "name": "Obtener informes actuales",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DECLARE @Proyecto nvarchar(30) = NULLIF(LTRIM(RTRIM(N'{{ $json.proyecto_sql }}')), N'');\nDECLARE @Version int = TRY_CONVERT(int, N'{{ $json.version_sql }}');\nDECLARE @FechaInicio date = TRY_CONVERT(date, NULLIF(N'{{ $json.fecha_inicio_sql }}', N''), 23);\nDECLARE @FechaTermino date = TRY_CONVERT(date, NULLIF(N'{{ $json.fecha_termino_sql }}', N''), 23);\n\n-- 1. Determinar que numero de informe toca crear\nDECLARE @UltimoInformeExistente int;\nDECLARE @FechaInicioPropuesta date;\nDECLARE @FechaCortePropuesta date;\nDECLARE @NumeroMesACrear int;\n\nSELECT @UltimoInformeExistente = ISNULL(MAX(inf_numero), 0)\nFROM dbo.PROYECTO_INFORME\nWHERE inf_proyecto_codigo = @Proyecto\n  AND inf_proyecto_version = @Version;\n\nSET @NumeroMesACrear = @UltimoInformeExistente + 1;\n\n-- 2. Calcular las fechas del periodo correspondiente a ese mes\nSET @FechaInicioPropuesta = DATEADD(MONTH, @NumeroMesACrear - 1, DATEFROMPARTS(YEAR(@FechaInicio), MONTH(@FechaInicio), 1));\nSET @FechaCortePropuesta = EOMONTH(@FechaInicioPropuesta);\n\n-- Si el corte supera la fecha de termino del convenio, se ajusta al termino real\nIF @FechaCortePropuesta > @FechaTermino\nBEGIN\n    SET @FechaCortePropuesta = @FechaTermino;\nEND;\n\n-- 3. Proyectar UN SOLO registro por proyecto (el hito siguiente)\nSELECT\n    @Proyecto AS pro_codigo,\n    @Version AS pro_version,\n    @NumeroMesACrear AS numero_mes,\n    @FechaInicioPropuesta AS fecha_inicio_propuesta,\n    @FechaCortePropuesta AS fecha_corte_propuesta,\n    cal.fecha_entrega_calendario AS fecha_entrega_propuesta,\n    \n    CASE \n        WHEN @FechaCortePropuesta >= @FechaTermino THEN N'INFORME_FINAL'\n        ELSE N'INFORME_AVANCE'\n    END AS tipo_periodo_propuesto,\n    \n    CASE \n        WHEN @FechaCortePropuesta >= @FechaTermino THEN 4\n        ELSE 2\n    END AS inf_tipo_propuesto,\n    \n    CASE \n        WHEN @FechaCortePropuesta >= @FechaTermino THEN N'INFORME FINAL'\n        ELSE CONCAT(N'INFORME DE AVANCE MES ', @NumeroMesACrear)\n    END AS nombre_propuesto,\n    \n    CAST(1 AS int) AS estado_informe_propuesto,\n    CAST(1 AS bit) AS modo_prueba,\n    CAST(1 AS bit) AS propuesta_valida,\n    CAST(0 AS bit) AS aplicar_cambio,\n    CAST(1 AS bit) AS modo_simulacion\n\nFROM (SELECT 1 AS dummy) AS d\nOUTER APPLY\n(\n    SELECT MAX(sub.FECHA) AS fecha_entrega_calendario\n    FROM (\n        SELECT TOP (15) c.FECHA\n        FROM dbo.CALENDARIO AS c\n        WHERE c.FECHA > @FechaCortePropuesta\n          AND c.ES_HABIL = 1\n        ORDER BY c.FECHA ASC\n    ) AS sub\n) AS cal;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        -352
+      ],
+      "id": "54c2aa61-aa84-4ca4-894d-61ce3f0594cb",
+      "name": "Generar propuesta mensual",
+      "alwaysOutputData": false,
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function fechaValida(valor) {\n  if (!valor) return null;\n  const fecha = new Date(valor);\n  return Number.isNaN(fecha.getTime()) ? null : fecha;\n}\n\nfunction finDelMes(fecha) {\n  return new Date(Date.UTC(\n    fecha.getUTCFullYear(),\n    fecha.getUTCMonth() + 1,\n    0,\n    0,\n    0,\n    0\n  ));\n}\n\nfunction formatoFecha(fecha) {\n  if (!fecha) return null;\n  return fecha.toISOString().slice(0, 10);\n}\n\nreturn items.map(({ json }) => {\n  const corteActual = fechaValida(json.inf_fecha_corte);\n  const esPendiente = Number(json.inf_estado) === 1;\n\n  let accion = 'SIN_CAMBIOS';\n  let motivo = 'El informe cuenta con parametrización válida.';\n  let cortePropuesto = corteActual;\n\n  if (!corteActual) {\n    if (esPendiente) {\n      accion = 'ASIGNAR_FECHA_CORTE';\n      motivo = 'Se requiere asignar fecha de corte mensual.';\n      \n      // Si es informe final o no hay corte, tomamos fecha_termino del proyecto\n      const fechaTerminoRef = fechaValida(json.fecha_termino || json._pro_fecha_termino_oficial);\n      if (fechaTerminoRef) {\n        cortePropuesto = finDelMes(fechaTerminoRef);\n      } else {\n        // En caso de no tener fecha término, sugerir fin del mes actual\n        cortePropuesto = finDelMes(new Date());\n      }\n    } else {\n      accion = 'BLOQUEADO_NO_PENDIENTE';\n      motivo = 'Informe sin fecha de corte pero no está en estado pendiente.';\n    }\n  } else {\n    const ultimoDia = finDelMes(corteActual);\n    const estaCerradoAlFinDeMes = corteActual.getUTCDate() === ultimoDia.getUTCDate();\n\n    if (!estaCerradoAlFinDeMes && esPendiente) {\n      accion = 'ACTUALIZAR_FECHA_CORTE';\n      cortePropuesto = ultimoDia;\n      motivo = 'Se propone ajustar la fecha de corte al último día del mes calendario.';\n    } else if (!esPendiente) {\n      accion = 'SIN_CAMBIOS';\n      motivo = 'Informe ya tramitado o cerrado (no pendiente).';\n    }\n  }\n\n  return {\n    json: {\n      ...json,\n      accion_correccion: accion,\n      motivo_correccion: motivo,\n      fecha_corte_original: formatoFecha(corteActual),\n      fecha_corte_propuesta: formatoFecha(cortePropuesto),\n      aplicar_cambio: true,\n      modo_simulacion: false\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -128
+      ],
+      "id": "eab8af7c-4530-48a1-87d1-f71272286c57",
+      "name": "Preparar correcciones mensuales",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6cf1895e-0fcf-4ba0-b0c6-01d73cdc56f0",
+              "leftValue": "={{ $json.accion_correccion }}",
+              "rightValue": "ACTUALIZAR_FECHA_CORTE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a0028ffc-f690-430e-9fc4-743101090a47",
+              "leftValue": "={{ $json.accion_correccion }}",
+              "rightValue": "ASIGNAR_FECHA_CORTE",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        -128
+      ],
+      "id": "bd2e6d91-8e22-4efa-aaec-69097875f4fb",
+      "name": "Filtrar correcciones aplicables",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0600ab23-81ca-4e10-904e-33897bf961b9",
+              "leftValue": "={{ $json.aplicar_cambio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7e96b9b6-860b-4c64-9ff2-81f62177bcb7",
+              "leftValue": "={{ $json.modo_simulacion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        944,
+        -128
+      ],
+      "id": "f24a8aea-fe88-43a6-964b-3c2e90d1737e",
+      "name": "¿Ejecución PID autorizada?",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SET NOCOUNT ON;\nSET XACT_ABORT ON;\n\nDECLARE @Proyecto nvarchar(30) = NULLIF(LTRIM(RTRIM(N'{{ $json.pro_codigo }}')), N'');\nDECLARE @Version int = TRY_CONVERT(int, N'{{ $json.pro_version }}');\nDECLARE @Informe int = TRY_CONVERT(int, N'{{ $json.inf_numero }}');\n\nDECLARE @FechaCortePropuesta datetime = COALESCE(\n    CAST(TRY_CONVERT(datetimeoffset, N'{{ $json.fecha_corte_propuesta }}') AS datetime),\n    TRY_CONVERT(datetime, LEFT(N'{{ $json.fecha_corte_propuesta }}', 10), 23),\n    TRY_CONVERT(datetime, LEFT(N'{{ $json.fecha_corte_propuesta }}', 10), 120)\n);\n\nDECLARE @FechaEntrega smalldatetime = COALESCE(\n    CAST(TRY_CONVERT(datetimeoffset, N'{{ $json.inf_entrega }}') AS smalldatetime),\n    TRY_CONVERT(smalldatetime, LEFT(N'{{ $json.inf_entrega }}', 10), 23),\n    TRY_CONVERT(smalldatetime, LEFT(N'{{ $json.inf_entrega }}', 10), 120)\n);\n\nDECLARE @AplicarCambio bit = ISNULL(TRY_CONVERT(bit, N'{{ $json.aplicar_cambio }}'), 0);\nDECLARE @ModoSimulacion bit = ISNULL(TRY_CONVERT(bit, N'{{ $json.modo_simulacion }}'), 1);\n\nDECLARE\n    @Tipo int = ISNULL(TRY_CONVERT(int, N'{{ $json.inf_tipo }}'), 2),\n    @Estado int = ISNULL(TRY_CONVERT(int, N'{{ $json.inf_estado }}'), 1),\n    @AprobacionFecha datetime = NULL,\n    @Nombre nvarchar(100) = ISNULL(NULLIF(LTRIM(RTRIM(N'{{ $json.inf_nombre }}')), N''), N'INFORME DE AVANCE'),\n    @Descripcion nvarchar(500) = N'Actualización de fecha de corte mensual';\n\n-- Lectura segura de valores existentes si el registro ya está en base de datos\nSELECT\n    @Tipo = ISNULL(i.inf_tipo, @Tipo),\n    @Estado = ISNULL(i.inf_estado, @Estado),\n    @AprobacionFecha = i.inf_aprobacion_fecha,\n    @Nombre = ISNULL(i.inf_nombre, @Nombre),\n    @Descripcion = ISNULL(i.inf_descripcion, @Descripcion)\nFROM dbo.PROYECTO_INFORME AS i\nWHERE i.inf_proyecto_codigo = @Proyecto\n  AND i.inf_proyecto_version = @Version\n  AND i.inf_numero = @Informe;\n\nBEGIN TRY\n    /*\n    BEGIN TRANSACTION;\n\n    EXEC dbo.UPD_PROYECTO_INFORME\n        @PROYECTO = @Proyecto,\n        @VERSION = @Version,\n        @INFORME = @Informe,\n        @TIPO = @Tipo,\n        @ESTADO = @Estado,\n        @APROBACION_FECHA = @AprobacionFecha,\n        @FECHA_CORTE = @FechaCortePropuesta,\n        @NOMBRE = @Nombre,\n        @DESCRIPCION = @Descripcion,\n        @ENTREGA = @FechaEntrega,\n        @USUARIO = N'CORFO\\ociel.escobar';\n\n    COMMIT TRANSACTION;\n    */\n\n    SELECT\n        @Proyecto AS pro_codigo,\n        @Version AS pro_version,\n        @Informe AS inf_numero,\n        @FechaCortePropuesta AS inf_fecha_corte_nueva,\n        @FechaEntrega AS inf_fecha_entrega,\n        'SIMULADO_CORRECCION_OK' AS resultado_ejecucion;\nEND TRY\nBEGIN CATCH\n    IF @@TRANCOUNT > 0\n        ROLLBACK TRANSACTION;\n\n    THROW;\nEND CATCH;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        -144
+      ],
+      "id": "bd834554-85c6-46b9-816c-e667f0e8c20b",
+      "name": "Aplicar corrección mensual PID",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function fecha(valor) {\n  if (!valor) return null;\n  if (typeof valor === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(valor)) {\n    const [y, m, d] = valor.split('-').map(Number);\n    return new Date(Date.UTC(y, m - 1, d));\n  }\n  const resultado = new Date(valor);\n  return Number.isNaN(resultado.getTime()) ? null : resultado;\n}\n\nreturn items.map(({ json }) => {\n  const errores = [];\n\n  const codigo = String(json.pro_codigo || '').trim();\n  const version = json.pro_version;\n  const numeroMes = Number(json.numero_mes);\n  const tipo = Number(json.inf_tipo_propuesto);\n\n  const inicio = fecha(json.fecha_inicio_propuesta);\n  const corte = fecha(json.fecha_corte_propuesta);\n  const entrega = fecha(json.fecha_entrega_propuesta);\n\n  // 1. Validaciones de Identificación\n  if (!codigo) {\n    errores.push('Falta el código de proyecto.');\n  }\n\n  if (version === null || version === undefined || version === '') {\n    errores.push('Falta la versión del proyecto.');\n  }\n\n  // 2. Validaciones de Hito\n  if (!Number.isInteger(numeroMes) || numeroMes < 1) {\n    errores.push(`Número de informe inválido (${numeroMes}).`);\n  }\n\n  // 3. Validaciones de Fechas de Período\n  if (!inicio || !corte) {\n    errores.push('Fechas de inicio o corte incompletas.');\n  } else if (corte < inicio) {\n    errores.push('La fecha de corte es anterior al inicio del período.');\n  }\n\n  // 4. Validación de Entrega Hábil\n  if (!entrega) {\n    errores.push('No se calculó la fecha de entrega con el calendario institucional.');\n  } else if (corte && entrega < corte) {\n    errores.push('La fecha de entrega es anterior a la fecha de corte.');\n  }\n\n  const propuestaValida = errores.length === 0;\n\n  return {\n    json: {\n      ...json,\n      propuesta_valida: propuestaValida,\n      cantidad_informes_propuestos: 1, // 1 informe inmediato para este proyecto\n      errores_validacion: errores.length > 0 ? errores.join(' | ') : null,\n      requiere_calendario_habil: true,\n      calendario_habil_disponible: Boolean(entrega),\n      requiere_plazo_final: tipo === 4,\n      plazo_final_disponible: Boolean(entrega),\n      aplicar_cambio: true,           // Conserva el seguro de simulación\n      modo_simulacion: false\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -352
+      ],
+      "id": "b3c38f67-a6fc-4a45-8270-eec4c3732ba4",
+      "name": "Validar propuesta de plan",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "05fb0aba-b0ab-4b64-acfa-00263950db93",
+              "leftValue": "={{ $json.propuesta_valida }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4ed6f5c2-c8d3-49d8-bc67-24d4ef0e0d41",
+              "leftValue": "={{ $json.aplicar_cambio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "f151b773-a5ca-4432-b552-2f2a0cb9213a",
+              "leftValue": "={{ $json.modo_simulacion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "fb4ac99d-b562-4f9b-b2a9-13db8ccf82a8",
+              "leftValue": "={{ $json.calendario_habil_disponible }}\n",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3594243d-f938-48d1-ab6e-510b791454cd",
+              "leftValue": "={{ String($json.plazo_final_disponible).toLowerCase() === 'true' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1536,
+        -352
+      ],
+      "id": "0e6748be-8022-4116-96b3-303b3043a895",
+      "name": "¿Creación PID autorizada?",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "361533e0-9180-458a-b4a3-ed4796ba94eb",
+              "name": "resultado_ejecucion",
+              "value": "SIMULADO_NO_APLICADO",
+              "type": "string"
+            },
+            {
+              "id": "46c2ac1f-88de-4f43-a3aa-02c1347e96a7",
+              "name": "motivo_no_ejecucion",
+              "value": "Modo simulación activo o cambio no autorizado",
+              "type": "string"
+            },
+            {
+              "id": "a3f46a15-5276-4795-9438-7b59713ef0ee",
+              "name": "fecha_simulacion",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        128
+      ],
+      "id": "9c18b937-601f-491b-af5d-2d978fab4fe7",
+      "name": "Registrar simulación corrección",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "function normalizarFecha(valor) {\n  if (\n    valor === null ||\n    valor === undefined ||\n    valor === ''\n  ) {\n    return null;\n  }\n\n  const texto = String(valor).trim();\n  const coincidencia = texto.match(\n    /^(\\d{4})-(\\d{2})-(\\d{2})/\n  );\n\n  if (coincidencia) {\n    return `${coincidencia[1]}-${coincidencia[2]}-${coincidencia[3]}`;\n  }\n\n  const fecha = new Date(valor);\n\n  if (Number.isNaN(fecha.getTime())) {\n    return null;\n  }\n\n  return fecha.toISOString().slice(0, 10);\n}\n\nreturn items.map(({ json }) => {\n  const tipo = Number(json.inf_tipo_propuesto);\n\n  const esInformeAvance = tipo === 2;\n  const esInformeFinal = tipo === 4;\n\n  let fechaEntrega = null;\n  let metodoCalculo = null;\n  let observacion = null;\n\n  if (esInformeAvance) {\n    fechaEntrega = normalizarFecha(\n      json.fecha_entrega_propuesta\n    );\n\n    metodoCalculo =\n      '15_DIAS_HABILES_CALENDARIO_CORFO';\n\n    observacion =\n      'Calculado con calendario institucional Draco (días hábiles y feriados).';\n  }\n\n  if (esInformeFinal) {\n    fechaEntrega = normalizarFecha(\n      json.fecha_entrega_propuesta ??\n      json.fecha_entrega_final_base ??\n      json.fecha_entrega_final_sql\n    );\n\n    if (fechaEntrega) {\n      metodoCalculo =\n        'PLAZO_FINAL_EXISTENTE';\n\n      observacion =\n        'Fecha obtenida del informe final existente del proyecto.';\n    } else {\n      metodoCalculo =\n        'PLAZO_FINAL_NO_DEFINIDO';\n\n      observacion =\n        'El plazo del informe final debe obtenerse del acto, convenio o regla institucional.';\n    }\n  }\n\n  return {\n    json: {\n      ...json,\n\n      fecha_entrega_propuesta:\n        fechaEntrega,\n\n      metodo_calculo_entrega:\n        metodoCalculo,\n\n      observacion_entrega:\n        observacion,\n\n      requiere_calendario_habil:\n        esInformeAvance,\n\n      calendario_habil_disponible:\n        esInformeAvance\n          ? json.calendario_habil_disponible === true\n          : true,\n\n      entrega_es_provisional:\n        false,\n\n      requiere_plazo_final:\n        esInformeFinal,\n\n      plazo_final_disponible:\n        esInformeFinal\n          ? Boolean(fechaEntrega)\n          : Boolean(json.plazo_final_disponible)\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -352
+      ],
+      "id": "ca01151e-0636-4e7b-86e7-a232658daea0",
+      "name": "Calcular entregas mensuales provisionales",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a9f6c961-e7e8-4bcc-808b-571180181c01",
+              "leftValue": "={{ Number($json.cantidad_bloqueos) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1984,
+        -256
+      ],
+      "id": "22e64f0b-b2ef-4bf1-812b-1ce719cc8032",
+      "name": "¿Faltan datos para crear PID?",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c9c02dcc-67e7-4ba9-b47f-e26c7727d65a",
+              "name": "tipo_alerta",
+              "value": "PID_R2_DATOS_INCOMPLETOS",
+              "type": "string"
+            },
+            {
+              "id": "766380e9-70bb-4743-8403-64b98cd5ccbc",
+              "name": "nivel_alerta",
+              "value": "ADVERTENCIA",
+              "type": "string"
+            },
+            {
+              "id": "36ab153b-a253-460f-aa16-8db65e1cc348",
+              "name": "asunto",
+              "value": "={{ '[PID R2] Datos pendientes para proyecto ' + $json.pro_codigo }}",
+              "type": "string"
+            },
+            {
+              "id": "c62b7515-a5b3-4462-baad-327be9356692",
+              "name": "detalle",
+              "value": "={{ $json.motivos_no_ejecucion }}",
+              "type": "string"
+            },
+            {
+              "id": "aca2af90-f074-492c-ba8b-50284f8c3b20",
+              "name": "estado_pid",
+              "value": "BLOQUEADO_DATOS_INSTITUCIONALES",
+              "type": "string"
+            },
+            {
+              "id": "89ab930f-9a6e-4d1e-894d-3fd25c7cae20",
+              "name": "requiere_accion_manual",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "db0fd4f7-8967-42b5-80c0-e4812b0c87ba",
+              "name": "fecha_alerta",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "50d49c67-ba0d-4e15-b4b6-a1f5439b4ada",
+              "name": "destinatario",
+              "value": "ociel.escobar@corfo.cl",
+              "type": "string"
+            },
+            {
+              "id": "e2369b0b-b1c8-41fc-999b-9be78f80c01a",
+              "name": "destinatario_temporal",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "de17c886-34bf-4ba3-b11e-f74e4cbdd80a",
+              "name": "criterio_destinatario",
+              "value": "DESTINATARIO_PRUEBA_PENDIENTE",
+              "type": "string"
+            },
+            {
+              "id": "78cd1d66-a0e5-4284-b5e8-1a95fc31284b",
+              "name": "cuerpo_html",
+              "value": "={{\n  '<html><body>' +\n  '<h2>Alerta de configuración PID R2</h2>' +\n  '<p><strong>Proyecto:</strong> ' + ($json.pro_codigo || '') + ' (Versión ' + ($json.pro_version || '0') + ')</p>' +\n  '<p><strong>Estado:</strong> BLOQUEADO_DATOS_INSTITUCIONALES</p>' +\n  '<p><strong>Hito propuesto:</strong> Mes ' + ($json.numero_mes_propuesto || '1') + ' (' + ($json.tipo_periodo_propuesto || 'INFORME_AVANCE') + ')</p>' +\n  '<p><strong>Fecha Corte:</strong> ' + ($json.fecha_corte_propuesta ? $json.fecha_corte_propuesta.substring(0, 10) : 'Pendiente') + \n  ' | <strong>Entrega:</strong> ' + ($json.fecha_entrega_propuesta || 'Pendiente') + '</p>' +\n  '<p><strong>Bloqueos detectados:</strong> ' + ($json.cantidad_bloqueos || 0) + '</p>' +\n  '<p><strong>Detalle:</strong> ' + ($json.motivos_no_ejecucion || 'Sin observaciones') + '</p>' +\n  '<p><em>Mensaje de prueba. El destinatario definitivo está pendiente de confirmación.</em></p>' +\n  '</body></html>'\n}}",
+              "type": "string"
+            },
+            {
+              "id": "1ef7207a-e4df-43b0-ba62-fdebb93b2eb4",
+              "name": "cc",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "fd34eebb-e3fd-44a2-a2b0-6a8f8add7572",
+              "name": "flujo_origen",
+              "value": "Automatización PID R2 - Alerta de datos incompletos",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "=all",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        -352
+      ],
+      "id": "3a758dad-5697-4fb8-9a66-daece3d45fca",
+      "name": "Preparar alerta PID incompleto",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalizar = (valor) =>\n  String(valor ?? '')\n    .trim()\n    .replace(/\\s+/g, ' ')\n    .toUpperCase();\n\nconst proyecto = normalizar($json.pro_codigo);\nconst version = Number($json.pro_version) || 0;\nconst tipoAlerta = normalizar(\n  $json.tipo_alerta || 'PID_R2_SIMULACION_EXITOSA'\n);\nconst bloqueos = Number($json.cantidad_bloqueos_datos ?? $json.cantidad_bloqueos ?? 0);\nconst motivos = normalizar(\n  $json.motivos_no_ejecucion || $json.detalle || 'SIN_BLOQUEOS_DATOS'\n);\n\nconst totalInformes = $json.cantidad_informes_propuestos ?? 37;\nconst informesAvance = $json.cantidad_informes_avance ?? 36;\nconst informesFinales = $json.cantidad_informes_finales ?? 1;\n\n// Cálculo de la firma de trazabilidad\nconst firmaBase = [\n  `PROYECTO=${proyecto}`,\n  `VERSION=${version}`,\n  `TIPO=${tipoAlerta}`,\n  `BLOQUEOS=${bloqueos}`,\n  `MOTIVOS=${motivos}`,\n].join('|');\n\n// Armado de variables para el subflujo de correo\nconst asunto = `[PID R2] Simulación de propuesta completada para proyecto ${proyecto}`;\nconst flujoOrigen = 'Automatización PID R2 - Validación y Firma de Plan';\n\nconst cuerpoHtml = `\n  <h2>Resumen de Validación PID R2</h2>\n  <p><strong>Proyecto:</strong> ${proyecto} (Versión ${version})</p>\n  <p><strong>Estado:</strong> SIMULACIÓN EXITOSA - DATOS COMPLETOS</p>\n  <p><strong>Informes Propuestos:</strong> ${totalInformes} (Avances: ${informesAvance}, Finales: ${informesFinales})</p>\n  <p><strong>Días Hábiles:</strong> Calculados mediante tabla dbo.CALENDARIO (Draco)</p>\n  <p><strong>Firma de Trazabilidad:</strong> <code>${firmaBase}</code></p>\n  <p><em>El plan mensual ha sido validado correctamente y está listo para formalización cuando se desactive el modo simulación.</em></p>\n`;\n\nreturn {\n  json: {\n    ...$json,\n    destinatario: $json.destinatario || 'ociel.escobar@corfo.cl',\n    asunto: asunto,\n    cuerpo_html: cuerpoHtml,\n    flujo_origen: flujoOrigen,\n    firma_alerta_base: firmaBase,\n    firma_alerta_base_sql: firmaBase.replace(/'/g, \"''\"),\n  },\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        -112
+      ],
+      "id": "5117e04a-d413-4ce2-869a-772c9a936979",
+      "name": "Preparar firma de alerta",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DECLARE @Proyecto nvarchar(30) = NULLIF(LTRIM(RTRIM(N'{{ $json.pro_codigo }}')), N'');\nDECLARE @Version int = TRY_CONVERT(int, N'{{ $json.pro_version }}');\nDECLARE @Informe int = TRY_CONVERT(int, COALESCE(NULLIF(N'{{ $json.numero_mes }}', N''), NULLIF(N'{{ $json.numero_mes_propuesto }}', N''), N'1'));\nDECLARE @Tipo int = ISNULL(TRY_CONVERT(int, N'{{ $json.inf_tipo_propuesto }}'), 2);\nDECLARE @Estado int = ISNULL(TRY_CONVERT(int, N'{{ $json.estado_informe_propuesto }}'), 1);\nDECLARE @Nombre nvarchar(100) = NULLIF(LTRIM(RTRIM(N'{{ $json.nombre_propuesto }}')), N'');\nDECLARE @Descripcion nvarchar(500) = N'Generado automáticamente vía automatización PID';\n\n-- Parseo compatible con sufijos ISO 'Z' o formato plano YYYY-MM-DD\nDECLARE @FechaCorte datetime = COALESCE(\n    CAST(TRY_CONVERT(datetimeoffset, N'{{ $json.fecha_corte_propuesta }}') AS datetime),\n    TRY_CONVERT(datetime, LEFT(N'{{ $json.fecha_corte_propuesta }}', 10), 23),\n    TRY_CONVERT(datetime, LEFT(N'{{ $json.fecha_corte_propuesta }}', 10), 120)\n);\n\nDECLARE @FechaEntrega smalldatetime = COALESCE(\n    CAST(TRY_CONVERT(datetimeoffset, N'{{ $json.fecha_entrega_propuesta }}') AS smalldatetime),\n    TRY_CONVERT(smalldatetime, LEFT(N'{{ $json.fecha_entrega_propuesta }}', 10), 23),\n    TRY_CONVERT(smalldatetime, LEFT(N'{{ $json.fecha_entrega_propuesta }}', 10), 120)\n);\n\nDECLARE @Usuario nvarchar(50) = N'CORFO\\ociel.escobar';\n\nIF @Proyecto IS NOT NULL \n   AND @Version IS NOT NULL \n   AND @Informe IS NOT NULL \n   AND @FechaCorte IS NOT NULL \n   AND @FechaEntrega IS NOT NULL\nBEGIN\n    /*\n    EXEC dbo.INS_PROYECTO_INFORME\n        @PROYECTO = @Proyecto,\n        @VERSION = @Version,\n        @INFORME = @Informe,\n        @TIPO = @Tipo,\n        @ESTADO = @Estado,\n        @NOMBRE = @Nombre,\n        @DESCRIPCION = @Descripcion,\n        @FECHA_CORTE = @FechaCorte,\n        @ENTREGA = @FechaEntrega,\n        @USUARIO = @Usuario;\n    */\n\n    SELECT \n        @Proyecto AS pro_codigo,\n        @Version AS pro_version,\n        @Informe AS numero_mes,\n        'SIMULADO_INSERCION_OK' AS estado_resultado,\n        @FechaCorte AS fecha_corte_aplicada,\n        @FechaEntrega AS fecha_entrega_aplicada;\nEND\nELSE\nBEGIN\n    SELECT \n        @Proyecto AS pro_codigo,\n        @Version AS pro_version,\n        @Informe AS numero_mes,\n        'ERROR_DATOS_INCOMPLETOS_SP' AS estado_resultado,\n        @FechaCorte AS fecha_corte_aplicada,\n        @FechaEntrega AS fecha_entrega_aplicada;\nEND;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        -784
+      ],
+      "id": "59d0247a-0386-423e-8a04-4cef1e4aea77",
+      "name": "Crear PID en Base de Datos",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DECLARE @Proyecto nvarchar(30) = NULLIF(LTRIM(RTRIM(N'{{ $json.pro_codigo }}')), N'');\nDECLARE @Version int = TRY_CONVERT(int, N'{{ $json.pro_version }}');\nDECLARE @InformePropuesto int = TRY_CONVERT(int, N'{{ $json.numero_mes ?? $json.numero_mes_propuesto }}');\n\nSELECT\n    @Proyecto AS pro_codigo,\n    @Version AS pro_version,\n    @InformePropuesto AS numero_mes_propuesto,\n\n    -- Recuperación de los campos borrados para que pasen al siguiente nodo\n    N'{{ $json.numero_mes }}' AS numero_mes,\n    N'{{ $json.fecha_corte_propuesta }}' AS fecha_corte_propuesta,\n    N'{{ $json.fecha_entrega_propuesta }}' AS fecha_entrega_propuesta,\n    TRY_CONVERT(int, N'{{ $json.inf_tipo_propuesto }}') AS inf_tipo_propuesto,\n    TRY_CONVERT(int, N'{{ $json.estado_informe_propuesto }}') AS estado_informe_propuesto,\n    N'{{ $json.nombre_propuesto }}' AS nombre_propuesto,\n\n    COUNT(i.inf_numero) AS total_informes_existentes,\n\n    ISNULL(\n        SUM(CASE WHEN i.inf_numero = @InformePropuesto THEN 1 ELSE 0 END), 0\n    ) AS colisiones_mismo_numero,\n\n    ISNULL(\n        SUM(CASE WHEN i.inf_tipo = 4 THEN 1 ELSE 0 END), 0\n    ) AS informes_finales_existentes,\n\n    CAST(\n        CASE WHEN COUNT(i.inf_numero) = 0 THEN 1 ELSE 0 END AS bit\n    ) AS crear_plan_completo_autorizable,\n\n    CAST(\n        CASE WHEN ISNULL(SUM(CASE WHEN i.inf_numero = @InformePropuesto THEN 1 ELSE 0 END), 0) = 0 \n        THEN 1 ELSE 0 END AS bit\n    ) AS numero_informe_disponible,\n\n    CASE\n        WHEN COUNT(i.inf_numero) = 0 THEN 'SIN_INFORMES_EXISTENTES_CREAR_PLAN'\n        WHEN ISNULL(SUM(CASE WHEN i.inf_numero = @InformePropuesto THEN 1 ELSE 0 END), 0) > 0 THEN 'COLISION_NUMERO_INFORME'\n        ELSE 'PROYECTO_CON_PLAN_EXISTENTE_CONFIGURAR'\n    END AS diagnostico_colision,\n\n    CASE\n        WHEN COUNT(i.inf_numero) = 0 THEN 'CREAR_PLAN'\n        ELSE 'CONFIGURAR_PLAN_MENSUAL'\n    END AS accion_recomendada\n\nFROM dbo.PROYECTO_INFORME AS i\nWHERE i.inf_proyecto_codigo = @Proyecto\n  AND i.inf_proyecto_version = @Version;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        1776,
+        -560
+      ],
+      "id": "0f30c123-8b40-4698-9a2d-6b154152a365",
+      "name": "Validar colisiones antes de crear PID",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(({ json }) => {\n  const totalExistentes = Number(json.total_informes_existentes ?? 0);\n  const colisionesMismoNumero = Number(json.colisiones_mismo_numero ?? 0);\n  const crearPlanAutorizable = json.crear_plan_completo_autorizable === true;\n\n  // Si no tiene informes y está autorizado -> CREAR_PLAN\n  // Si ya tiene informes previos pero no colisiona -> CONFIGURAR_PLAN_MENSUAL\n  const accionSegura = (totalExistentes === 0 && crearPlanAutorizable)\n    ? 'CREAR_PLAN'\n    : 'CONFIGURAR_PLAN_MENSUAL';\n\n  return {\n    json: {\n      ...json, // Conserva todos los campos necesarios para la inserción (fechas, tipo, etc.)\n      total_informes_existentes: totalExistentes,\n      informes_finales_existentes: Number(json.informes_finales_existentes ?? 0),\n      cantidad_colisiones: colisionesMismoNumero,\n      crear_plan_completo_autorizable: crearPlanAutorizable,\n      accion_pid_segura: accionSegura,\n      diagnostico_colision: json.diagnostico_colision,\n      requiere_configuracion_plan: accionSegura === 'CONFIGURAR_PLAN_MENSUAL',\n      puede_insertar_plan_completo: accionSegura === 'CREAR_PLAN' && colisionesMismoNumero === 0,\n      \n      // Control de producción/simulación\n      modo_simulacion: false,\n      aplicar_cambio: true\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        -560
+      ],
+      "id": "f52785fa-f52d-4aa1-9707-c71513c0f45b",
+      "name": "Resolver acción según colisiones",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.accion_pid_segura }}",
+                    "rightValue": "CREAR_PLAN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c716fff2-7bcc-4a04-a041-f019e8b62fff"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Crear plan seguro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "12b3c54f-f152-4971-9504-388ea6ef0e3b",
+                    "leftValue": "={{ $json.accion_pid_segura }}",
+                    "rightValue": "CONFIGURAR_PLAN_MENSUAL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Configurar plan existente"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        -560
+      ],
+      "id": "39766e2e-c854-467f-9aa6-357f48961f88",
+      "name": "Enrutar acción PID segura",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "baPGZq93Efo5Dti6",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/baPGZq93Efo5Dti6"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "destinatario": "=",
+            "asunto": "={{ $json.asunto }}",
+            "cuerpo_html": "={{ $json.cuerpo_html }}",
+            "flujo_origen": "={{ $json.flujo_origen }}",
+            "cc": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "destinatario",
+              "displayName": "destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "asunto",
+              "displayName": "asunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cuerpo_html",
+              "displayName": "cuerpo_html",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cc",
+              "displayName": "cc",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "flujo_origen",
+              "displayName": "flujo_origen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2848,
+        -352
+      ],
+      "id": "f6a4230c-5679-4614-a9c2-e3a979fc40ab",
+      "name": "Enviar correo alerta PID incompleto",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "baPGZq93Efo5Dti6",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/baPGZq93Efo5Dti6"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "destinatario": "=",
+            "asunto": "={{ $json.asunto }}",
+            "cuerpo_html": "={{ $json.cuerpo_html }}",
+            "flujo_origen": "={{ $json.flujo_origen }}",
+            "cc": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "destinatario",
+              "displayName": "destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "asunto",
+              "displayName": "asunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cuerpo_html",
+              "displayName": "cuerpo_html",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cc",
+              "displayName": "cc",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "flujo_origen",
+              "displayName": "flujo_origen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2848,
+        -112
+      ],
+      "id": "36a7fa66-121d-4fcc-a0a0-beb0bacdb8c3",
+      "name": "Enviar correo confirmación simulación OK",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "361533e0-9180-458a-b4a3-ed4796ba94eb",
+              "name": "resultado_ejecucion",
+              "value": "SIMULADO_NO_APLICADO",
+              "type": "string"
+            },
+            {
+              "id": "46c2ac1f-88de-4f43-a3aa-02c1347e96a7",
+              "name": "motivo_no_ejecucion",
+              "value": "Modo simulación activo o cambio no autorizado",
+              "type": "string"
+            },
+            {
+              "id": "a3f46a15-5276-4795-9438-7b59713ef0ee",
+              "name": "fecha_simulacion",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3088,
+        -112
+      ],
+      "id": "3239d3b3-08cf-4d04-bd3a-47540b91aa41",
+      "name": "Registrar log de simulación creación",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "edfd5448-e183-447b-bc01-6aaee8442229",
+              "name": "=estado_cumplimiento_plan_mensual",
+              "value": "={{ $json.cant_informes_totales > 0 ? 'CON_PLAN_EXISTENTE' : 'SIN_PLAN_INFORME' }}",
+              "type": "string"
+            },
+            {
+              "id": "486678c1-33fd-465d-a75b-7d2f2b16620e",
+              "name": "=accion_pid",
+              "value": "={{ $json.accion_sugerida }}",
+              "type": "string"
+            },
+            {
+              "id": "3de25fd5-b4ca-479a-b2ab-e4503a59b31f",
+              "name": "modo_prueba",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "52dcdb30-e13d-46d8-b8c0-d87bc3050e4d",
+              "name": "simulacion_forzada",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        -192
+      ],
+      "id": "656c96f5-b513-4800-bf5e-ac1e9e498640",
+      "name": "Configurar entorno de simulación",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH UltimaVersionVigente AS (\n    SELECT \n        DISTINCT(p.pro_codigo),\n        MAX(p.pro_version) AS max_version\n    FROM Innova_Produccion..PROYECTOS_X p\n    LEFT JOIN Innova_Produccion..PROYECTO_SITUACION s \n        ON s.psi_proyecto = p.pro_codigo \n       AND s.psi_tipo_situacion = 27\n    WHERE \n        p.pro_estado IN (10, 11, 12, 13)\n        AND p.pro_categoria IN (1, 4)\n        -- Filtro R2 institucional\n        AND EXISTS (\n            SELECT 1 \n            FROM Innova_Produccion..PROYECTOS_AFECTOS_R2 r2 \n            WHERE r2.pr2_proyecto_codigo = p.pro_codigo\n        )\n        -- Caso 1 (Semáforo 27 activo y no finalizado) O Caso 2 (No existe semáforo 27)\n        AND (\n            (s.psi_tipo_situacion = 27 AND s.psi_situacion_finalizada = 0)\n            OR s.psi_proyecto IS NULL\n        )\n    GROUP BY p.pro_codigo\n),\nResumenInformes AS (\n    SELECT \n        DISTINCT(p.pro_codigo),\n        p.pro_version,\n        p.pro_codigo_humano,\n        p.pro_nombre_corto,\n        p.pro_nombre_largo,\n        p.pro_estado,\n        p.pro_categoria,\n        p.pro_fecha_creacion,\n        p.pro_fecha_actualizacion,\n        p.pro_resolucion_fecha,\n        COALESCE(p._pro_fecha_inicio_oficial, p.pro_fecha_inicio) AS fecha_inicio,\n        COALESCE(p._pro_fecha_termino_oficial, p.pro_fecha_termino) AS fecha_termino,\n        COALESCE(YEAR(p.pro_fecha_creacion), TRY_CAST(LEFT(p.pro_codigo, 4) AS INT)) AS ano_origen,\n        COUNT(i.inf_numero) AS cant_informes_totales,\n        COUNT(CASE WHEN i.inf_estado = 1 THEN 1 END) AS cant_informes_vigentes,\n        COUNT(CASE WHEN i.inf_estado <> 1 THEN 1 END) AS cant_informes_no_vigentes\n    FROM UltimaVersionVigente uv\n    INNER JOIN Innova_Produccion..PROYECTOS_X p \n        ON p.pro_codigo = uv.pro_codigo \n       AND p.pro_version = uv.max_version\n    LEFT JOIN Innova_Produccion..PROYECTO_INFORME i \n        ON i.inf_proyecto_codigo = p.pro_codigo \n       AND i.inf_proyecto_version = p.pro_version\n    GROUP BY \n        p.pro_codigo,\n        p.pro_version,\n        p.pro_codigo_humano,\n        p.pro_nombre_corto,\n        p.pro_nombre_largo,\n        p.pro_estado,\n        p.pro_categoria,\n        p.pro_fecha_creacion,\n        p.pro_fecha_actualizacion,\n        p.pro_resolucion_fecha,\n        p._pro_fecha_inicio_oficial,\n        p.pro_fecha_inicio,\n        p._pro_fecha_termino_oficial,\n        p.pro_fecha_termino\n)\nSELECT \n    DISTINCT(pro_codigo),\n    pro_version,\n    pro_codigo_humano,\n    pro_estado,\n    pro_categoria,\n    COALESCE(NULLIF(TRIM(pro_nombre_largo), ''), pro_nombre_corto, pro_codigo_humano) AS nombre_proyecto,\n    ano_origen,\n    fecha_inicio,\n    fecha_termino,\n    DATEDIFF(day, fecha_inicio, fecha_termino) AS duracion_dias,\n    cant_informes_totales,\n    cant_informes_vigentes,\n    CASE \n        WHEN cant_informes_totales = 0 THEN 'CREAR_PLAN'\n        ELSE 'CONFIGURAR_PLAN_EXISTENTE'\n    END AS accion_sugerida,\n    pro_resolucion_fecha,\n    pro_fecha_actualizacion\nFROM ResumenInformes\n  WHERE \n    -- 1. Proyectos sin plan inicial\n    cant_informes_totales = 0\n    -- 2. O proyectos con informes vigentes/pendientes sin informes cerrados definitivos\n    OR (cant_informes_vigentes > 0 AND cant_informes_no_vigentes = 0)\n  ORDER BY \n    ano_origen DESC, \n    pro_codigo DESC;",
+        "options": {}
+      },
+      "id": "df167ed9-58fb-4cb4-920b-f7724ad31416",
+      "name": "Consultar adjudicados R2 pendientes",
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -800
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function fechaISO(valor) {\n  if (\n    valor === null ||\n    valor === undefined ||\n    valor === ''\n  ) {\n    return null;\n  }\n\n  const texto = String(valor).trim();\n\n  // Si ya viene como YYYY-MM-DD o como fecha ISO.\n  const coincidenciaISO = texto.match(\n    /^(\\d{4})-(\\d{2})-(\\d{2})/\n  );\n\n  if (coincidenciaISO) {\n    return (\n      `${coincidenciaISO[1]}-` +\n      `${coincidenciaISO[2]}-` +\n      `${coincidenciaISO[3]}`\n    );\n  }\n\n  // Respaldo por si n8n lo convirtió en un objeto Date\n  // o en otro formato reconocible por JavaScript.\n  const fecha = new Date(valor);\n\n  if (Number.isNaN(fecha.getTime())) {\n    return null;\n  }\n\n  const anio = fecha.getUTCFullYear();\n\n  const mes = String(\n    fecha.getUTCMonth() + 1\n  ).padStart(2, '0');\n\n  const dia = String(\n    fecha.getUTCDate()\n  ).padStart(2, '0');\n\n  return `${anio}-${mes}-${dia}`;\n}\n\nfunction booleano(valor) {\n  return (\n    valor === true ||\n    valor === 1 ||\n    String(valor).trim().toLowerCase() === 'true'\n  );\n}\n\nreturn items.map(item => {\n  const entrada = item.json;\n\n  const fechaInicioSQL = fechaISO(\n    entrada.fecha_inicio_base\n  );\n\n  const fechaTerminoSQL = fechaISO(\n    entrada.fecha_termino_base\n  );\n\n  const fechaEntregaFinalSQL = fechaISO(\n    entrada.fecha_entrega_final_base\n  );\n\n  const plazoFinalDisponible =\n    booleano(entrada.plazo_final_disponible) &&\n    fechaEntregaFinalSQL !== null;\n\n  return {\n    json: {\n      ...entrada,\n\n      proyecto_sql: String(\n        entrada.pro_codigo ?? ''\n      ).trim(),\n\n      version_sql: String(\n        entrada.pro_version ?? ''\n      ).trim(),\n\n      fecha_inicio_sql:\n        fechaInicioSQL,\n\n      fecha_termino_sql:\n        fechaTerminoSQL,\n\n      numero_informe_final_existente:\n        entrada.numero_informe_final_existente ?? null,\n\n      fecha_corte_final_sql:\n        fechaISO(\n          entrada.fecha_corte_final_existente\n        ),\n\n      fecha_entrega_final_sql:\n        fechaEntregaFinalSQL,\n\n      plazo_final_disponible:\n        plazoFinalDisponible\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -352
+      ],
+      "id": "aafc81ad-41f0-4969-9aae-2abee78a2831",
+      "name": "Normalizar fechas de vigencia",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(({ json }) => {\n  const bloqueos = [];\n\n  if (!json.propuesta_valida) {\n    bloqueos.push(json.errores_validacion || 'Propuesta no válida');\n  }\n  if (json.modo_simulacion === true) {\n    bloqueos.push('Modo simulación activo (escritura bloqueada por seguridad)');\n  }\n  if (json.aplicar_cambio !== true) {\n    bloqueos.push('Flag aplicar_cambio en false');\n  }\n\n  return {\n    json: {\n      pro_codigo: json.pro_codigo,\n      pro_version: json.pro_version,\n      pro_codigo_humano: json.pro_codigo_humano,\n      resultado_ejecucion: 'SIMULADO_NO_APLICADO',\n      propuesta_valida: json.propuesta_valida,\n      numero_mes_propuesto: json.numero_mes,\n      fecha_corte_propuesta: json.fecha_corte_propuesta,\n      fecha_entrega_propuesta: json.fecha_entrega_propuesta,\n      tipo_periodo_propuesto: json.tipo_periodo_propuesto,\n      modo_simulacion: json.modo_simulacion,\n      aplicar_cambio: json.aplicar_cambio,\n      cantidad_bloqueos: bloqueos.length,\n      motivos_no_ejecucion: bloqueos.join(' | '),\n      fecha_simulacion: new Date().toISOString()\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        -256
+      ],
+      "id": "9a26d8fa-ed6f-434d-b4c2-60c9a3d92e0b",
+      "name": "Generar resumen y bloqueos de simulación",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        912,
+        -800
+      ],
+      "id": "409e7254-25b9-4030-b34c-4ab5e394d394",
+      "name": "Loop Over Items",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst fechaTermino = item.fecha_termino ? new Date(item.fecha_termino) : null;\nconst ultimaFechaCorte = item.ultima_fecha_corte ? new Date(item.ultima_fecha_corte) : null;\nconst ultimoNumero = item.ultimo_inf_numero || 0;\n\n// Si ya igualó o superó la fecha de término, el plan está finalizado\nif (!fechaTermino || (ultimaFechaCorte && ultimaFechaCorte >= fechaTermino)) {\n  return [{\n    json: {\n      ...item,\n      plan_finalizado: true,\n      motivo: \"El proyecto ya alcanzó o superó su fecha oficial de término.\"\n    }\n  }];\n}\n\n// Proyectar siguiente mes (+1 mes calendario)\nlet siguienteCorte = new Date(ultimaFechaCorte);\nsiguienteCorte.setMonth(siguienteCorte.getMonth() + 1);\n\n// Si sobrepasa el término oficial, se acota a la fecha término\nif (siguienteCorte > fechaTermino) {\n  siguienteCorte = fechaTermino;\n}\n\n// Fecha de entrega sugerida (ej. 15 días posteriores al corte)\nconst siguienteEntrega = new Date(siguienteCorte);\nsiguienteEntrega.setDate(siguienteEntrega.getDate() + 15);\n\nreturn [{\n  json: {\n    ...item,\n    plan_finalizado: false,\n    siguiente_inf_numero: ultimoNumero + 1,\n    siguiente_fecha_corte: siguienteCorte.toISOString().slice(0, 10),\n    siguiente_fecha_entrega: siguienteEntrega.toISOString().slice(0, 10),\n    nombre_informe: `Informe de Avance N° ${ultimoNumero + 1}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        -544
+      ],
+      "id": "8989b41f-cf4a-4d81-8203-713781177319",
+      "name": "Calcular siguiente informe mensual",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    p.pro_codigo,\n    p.pro_version,\n    COALESCE(p._pro_fecha_termino_oficial, p.pro_fecha_termino) AS fecha_termino,\n    ISNULL(MAX(i.inf_numero), 0) AS ultimo_inf_numero,\n    MAX(i.inf_fecha_corte) AS ultima_fecha_corte\nFROM dbo.PROYECTOS_X p\nLEFT JOIN dbo.PROYECTO_INFORME i \n    ON i.inf_proyecto_codigo = p.pro_codigo \n   AND i.inf_proyecto_version = p.pro_version\nWHERE p.pro_codigo = '{{ $json.pro_codigo }}'\n  AND p.pro_version = {{ $json.pro_version }}\nGROUP BY \n    p.pro_codigo, \n    p.pro_version, \n    p._pro_fecha_termino_oficial, \n    p.pro_fecha_termino;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        2848,
+        -544
+      ],
+      "id": "df02ef3d-60c6-4702-8b00-a922deb3b186",
+      "name": "Obtener último informe",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "57740f80-f265-4bc0-9707-af7043f190a2",
+              "leftValue": "={{ $json.plan_finalizado }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3264,
+        -544
+      ],
+      "id": "706065af-bfc6-429a-b68f-e26419508515",
+      "name": "¿Alcanzó fin de proyecto?",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.completos = (staticData.completos || 0) + 1;\n\nreturn [{\n  json: {\n    pro_codigo: $json.pro_codigo,\n    estado: 'PLAN_COMPLETO',\n    mensaje: $json.motivo || 'El plan mensual ya cubrió la vigencia total del proyecto.'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3504,
+        -560
+      ],
+      "id": "be5edefe-b6e2-4b45-843c-489732ed0e9d",
+      "name": "Registrar plan completado",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "BEGIN TRANSACTION;\n/*\nEXEC dbo.INS_PROYECTO_INFORME\n    @PROYECTO = '{{ $json.pro_codigo }}',\n    @VERSION = {{ $json.pro_version }},\n    @INFORME = {{ $json.siguiente_inf_numero }},\n    @TIPO = 1,\n    @ESTADO = 1,\n    @APROBACION_FECHA = NULL,\n    @FECHA_CORTE = '{{ $json.siguiente_fecha_corte }}',\n    @NOMBRE = N'{{ $json.nombre_informe }}',\n    @DESCRIPCION = N'Generación mensual automática siguiente período',\n    @ENTREGA = '{{ $json.siguiente_fecha_entrega }}',\n    @USUARIO = N'CORFO\\ociel.escobar';\n*/\nCOMMIT TRANSACTION;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        3440,
+        -352
+      ],
+      "id": "a439d50c-d417-485e-a65d-1ec14f5267c8",
+      "name": "Microsoft SQL",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "microsoftSql": {
+          "id": "8zAhDYdu83NZydjE",
+          "name": "DDSSGPSQLDESA\\DRACO - Innova_Produccion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\n\nconst creados = staticData.creados || 0;\nconst completos = staticData.completos || 0;\nconst alertas = staticData.alertas || 0;\nconst corregidos = staticData.corregidos || 0;\nconst totalAnalizados = creados + completos + alertas + corregidos;\n\nconst fechaFin = new Date().toLocaleString(\"es-CL\", { timeZone: \"America/Santiago\" });\n\nreturn [{\n  json: {\n    estado_lote: \"PROCESO_FINALIZADO\",\n    fecha_termino: fechaFin,\n    total_procesados: totalAnalizados,\n    planes_creados: creados,\n    planes_corregidos: corregidos,\n    planes_al_dia: completos,\n    alertas_incompletos: alertas\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -816
+      ],
+      "id": "76013ae0-4c71-49d5-8c34-d1439d701559",
+      "name": "Consolidar métricas del proceso",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "baPGZq93Efo5Dti6",
+          "mode": "id",
+          "cachedResultUrl": "/workflow/baPGZq93Efo5Dti6"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "destinatario": "ociel.escobar@corfo.cl",
+            "asunto": "={{ \"Resumen Ejecución PID - \" + $json.fecha_termino }}",
+            "cuerpo_html": "=<h3>Resumen de Ejecución PID</h3>\n<p>El procesamiento masivo ha concluido:</p>\n<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;\">\n  <tr style=\"background:#f2f2f2;\"><th>Métrica</th><th>Cantidad</th></tr>\n  <tr><td>Total analizados</td><td>{{ $json.total_procesados }}</td></tr>\n  <tr style=\"color:#2e7d32;\"><td>Planes nuevos creados</td><td>{{ $json.planes_creados }}</td></tr>\n  <tr style=\"color:#e65100;\"><td>Planes configurados / corregidos</td><td>{{ $json.planes_corregidos }}</td></tr>\n  <tr style=\"color:#0277bd;\"><td>Planes vigentes / Al día</td><td>{{ $json.planes_al_dia }}</td></tr>\n  <tr style=\"color:#c62828;\"><td>Alertas / Incompletos</td><td>{{ $json.alertas_incompletos }}</td></tr>\n</table>\n<p style=\"font-size:11px;color:#666;margin-top:12px;\">Fecha de término: {{ $json.fecha_termino }}</p>",
+            "flujo_origen": "Informes R2 PID - Batch"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "destinatario",
+              "displayName": "destinatario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "asunto",
+              "displayName": "asunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cuerpo_html",
+              "displayName": "cuerpo_html",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cc",
+              "displayName": "cc",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": true
+            },
+            {
+              "id": "flujo_origen",
+              "displayName": "flujo_origen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1712,
+        -816
+      ],
+      "id": "a57b2231-ab14-4e95-8285-7121d4892f5f",
+      "name": "Enviar correo confirmación simulación",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.creados = 0;\nstaticData.completos = 0;\nstaticData.alertas = 0;\nstaticData.corregidos = 0;\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -800
+      ],
+      "id": "3957a228-adc0-46dc-ba05-965daa09399b",
+      "name": "Inicializar contadores",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.creados = (staticData.creados || 0) + 1;\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        -784
+      ],
+      "id": "2201c5a4-4d2f-467c-b50a-5f4e1ad0f95e",
+      "name": "Sumar Creado"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.alertas = (staticData.alertas || 0) + 1;\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        -352
+      ],
+      "id": "ce93956d-7ff9-4af9-87be-a6fa9edeab9d",
+      "name": "Sumar alerta"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.corregidos = (staticData.corregidos || 0) + 1;\n\n// Retorna un único ítem para notificar al bucle que este proyecto terminó\nreturn [{\n  json: {\n    estado_proceso: 'CORRECCION_FINALIZADA',\n    ok: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -144
+      ],
+      "id": "cbc5fd0e-addd-4a47-a5c9-6ea2cea8e8aa",
+      "name": "Sumar corregido",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Cada mañana a las 7 AM": {
+      "main": [
+        [
+          {
+            "node": "Consultar adjudicados R2 pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrutar acción PID": {
+      "main": [
+        [
+          {
+            "node": "Obtener fechas base del proyecto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener informes actuales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener fechas base del proyecto": {
+      "main": [
+        [
+          {
+            "node": "Normalizar fechas de vigencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener informes actuales": {
+      "main": [
+        [
+          {
+            "node": "Preparar correcciones mensuales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar propuesta mensual": {
+      "main": [
+        [
+          {
+            "node": "Calcular entregas mensuales provisionales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar correcciones mensuales": {
+      "main": [
+        [
+          {
+            "node": "Filtrar correcciones aplicables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar correcciones aplicables": {
+      "main": [
+        [
+          {
+            "node": "¿Ejecución PID autorizada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ejecución PID autorizada?": {
+      "main": [
+        [
+          {
+            "node": "Aplicar corrección mensual PID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar simulación corrección",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar corrección mensual PID": {
+      "main": [
+        [
+          {
+            "node": "Sumar corregido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar propuesta de plan": {
+      "main": [
+        [
+          {
+            "node": "¿Creación PID autorizada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Creación PID autorizada?": {
+      "main": [
+        [
+          {
+            "node": "Validar colisiones antes de crear PID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generar resumen y bloqueos de simulación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar simulación corrección": {
+      "main": [
+        [
+          {
+            "node": "Sumar corregido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular entregas mensuales provisionales": {
+      "main": [
+        [
+          {
+            "node": "Validar propuesta de plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Faltan datos para crear PID?": {
+      "main": [
+        [
+          {
+            "node": "Preparar alerta PID incompleto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar firma de alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar alerta PID incompleto": {
+      "main": [
+        [
+          {
+            "node": "Sumar alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar firma de alerta": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo confirmación simulación OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear PID en Base de Datos": {
+      "main": [
+        [
+          {
+            "node": "Sumar Creado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar colisiones antes de crear PID": {
+      "main": [
+        [
+          {
+            "node": "Resolver acción según colisiones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolver acción según colisiones": {
+      "main": [
+        [
+          {
+            "node": "Enrutar acción PID segura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrutar acción PID segura": {
+      "main": [
+        [
+          {
+            "node": "Crear PID en Base de Datos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener último informe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar correo alerta PID incompleto": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar correo confirmación simulación OK": {
+      "main": [
+        [
+          {
+            "node": "Registrar log de simulación creación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar log de simulación creación": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configurar entorno de simulación": {
+      "main": [
+        [
+          {
+            "node": "Enrutar acción PID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar adjudicados R2 pendientes": {
+      "main": [
+        [
+          {
+            "node": "Inicializar contadores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar fechas de vigencia": {
+      "main": [
+        [
+          {
+            "node": "Generar propuesta mensual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar resumen y bloqueos de simulación": {
+      "main": [
+        [
+          {
+            "node": "¿Faltan datos para crear PID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Consolidar métricas del proceso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Configurar entorno de simulación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular siguiente informe mensual": {
+      "main": [
+        [
+          {
+            "node": "¿Alcanzó fin de proyecto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener último informe": {
+      "main": [
+        [
+          {
+            "node": "Calcular siguiente informe mensual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Alcanzó fin de proyecto?": {
+      "main": [
+        [
+          {
+            "node": "Registrar plan completado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Microsoft SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar plan completado": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Microsoft SQL": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidar métricas del proceso": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo confirmación simulación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar contadores": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sumar Creado": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sumar alerta": {
+      "main": [
+        [
+          {
+            "node": "Enviar correo alerta PID incompleto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sumar corregido": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b08fa240074e9e7fafc3ac3489d2e5b7e094dc86f350d59dcc00e475e055275d"
+  }
+}

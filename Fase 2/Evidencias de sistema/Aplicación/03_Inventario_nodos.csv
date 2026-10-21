@@ -1,0 +1,40 @@
+﻿Orden JSON;Nodo;ID;Tipo;Versión del nodo;Reintento;Manejo de error;Conexiones de salida;Fuente JS;Fuente SQL en Base de datos
+1;Cada mañana a las 7 AM;1ddbc662-5986-402a-94ae-c9910a2f1826;n8n-nodes-base.scheduleTrigger;1.1;False;detener por defecto;0: Consultar adjudicados R2 pendientes;;
+2;Enrutar acción PID;1ca3fed2-c7c3-4eda-b09e-d80c7b32aedb;n8n-nodes-base.switch;3.4;True;detener por defecto;"0: Obtener fechas base del proyecto; 1: Obtener informes actuales";;
+3;Obtener fechas base del proyecto;0495c2c8-a676-4a9b-9433-b400bd0b4e18;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Normalizar fechas de vigencia;;Nodos SQL/03_Obtener_fechas_base_del_proyecto.sql
+4;Obtener informes actuales;0a0f11f4-9b49-49b8-ba0a-d18c5c5aabe9;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Preparar correcciones mensuales;;Nodos SQL/04_Obtener_informes_actuales.sql
+5;Generar propuesta mensual;54c2aa61-aa84-4ca4-894d-61ce3f0594cb;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Calcular entregas mensuales provisionales;;Nodos SQL/05_Generar_propuesta_mensual.sql
+6;Preparar correcciones mensuales;eab8af7c-4530-48a1-87d1-f71272286c57;n8n-nodes-base.code;2;True;detener por defecto;0: Filtrar correcciones aplicables;Código JavaScript/06_Preparar_correcciones_mensuales.js;
+7;Filtrar correcciones aplicables;bd2e6d91-8e22-4efa-aaec-69097875f4fb;n8n-nodes-base.filter;2.3;True;detener por defecto;0: ¿Ejecución PID autorizada?;;
+8;¿Ejecución PID autorizada?;f24a8aea-fe88-43a6-964b-3c2e90d1737e;n8n-nodes-base.if;2.3;True;detener por defecto;"0: Aplicar corrección mensual PID; 1: Registrar simulación corrección";;
+9;Aplicar corrección mensual PID;bd834554-85c6-46b9-816c-e667f0e8c20b;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Sumar corregido;;Nodos SQL/09_Aplicar_correccion_mensual_PID.sql
+10;Validar propuesta de plan;b3c38f67-a6fc-4a45-8270-eec4c3732ba4;n8n-nodes-base.code;2;True;detener por defecto;0: ¿Creación PID autorizada?;Código JavaScript/10_Validar_propuesta_de_plan.js;
+11;¿Creación PID autorizada?;0e6748be-8022-4116-96b3-303b3043a895;n8n-nodes-base.if;2.3;True;detener por defecto;"0: Validar colisiones antes de crear PID; 1: Generar resumen y bloqueos de simulación";;
+12;Registrar simulación corrección;9c18b937-601f-491b-af5d-2d978fab4fe7;n8n-nodes-base.set;3.4;True;detener por defecto;0: Sumar corregido;;
+13;Calcular entregas mensuales provisionales;ca01151e-0636-4e7b-86e7-a232658daea0;n8n-nodes-base.code;2;True;detener por defecto;0: Validar propuesta de plan;Código JavaScript/13_Calcular_entregas_mensuales_provisionales.js;
+14;¿Faltan datos para crear PID?;22e64f0b-b2ef-4bf1-812b-1ce719cc8032;n8n-nodes-base.if;2.3;True;detener por defecto;"0: Preparar alerta PID incompleto; 1: Preparar firma de alerta";;
+15;Preparar alerta PID incompleto;3a758dad-5697-4fb8-9a66-daece3d45fca;n8n-nodes-base.set;3.4;True;detener por defecto;0: Sumar alerta;;
+16;Preparar firma de alerta;5117e04a-d413-4ce2-869a-772c9a936979;n8n-nodes-base.code;2;True;detener por defecto;0: Enviar correo confirmación simulación OK;Código JavaScript/16_Preparar_firma_de_alerta.js;
+17;Crear PID en Base de Datos;59d0247a-0386-423e-8a04-4cef1e4aea77;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Sumar Creado;;Nodos SQL/17_Crear_PID_en_Base_de_Datos.sql
+18;Validar colisiones antes de crear PID;0f30c123-8b40-4698-9a2d-6b154152a365;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Resolver acción según colisiones;;Nodos SQL/18_Validar_colisiones_antes_de_crear_PID.sql
+19;Resolver acción según colisiones;f52785fa-f52d-4aa1-9707-c71513c0f45b;n8n-nodes-base.code;2;True;detener por defecto;0: Enrutar acción PID segura;Código JavaScript/19_Resolver_accion_segun_colisiones.js;
+20;Enrutar acción PID segura;39766e2e-c854-467f-9aa6-357f48961f88;n8n-nodes-base.switch;3.4;True;detener por defecto;"0: Crear PID en Base de Datos; 1: Obtener último informe";;
+21;Enviar correo alerta PID incompleto;f6a4230c-5679-4614-a9c2-e3a979fc40ab;n8n-nodes-base.executeWorkflow;1.3;True;detener por defecto;0: Loop Over Items;;
+22;Enviar correo confirmación simulación OK;36a7fa66-121d-4fcc-a0a0-beb0bacdb8c3;n8n-nodes-base.executeWorkflow;1.3;True;detener por defecto;0: Registrar log de simulación creación;;
+23;Registrar log de simulación creación;3239d3b3-08cf-4d04-bd3a-47540b91aa41;n8n-nodes-base.set;3.4;True;detener por defecto;0: Loop Over Items;;
+24;Configurar entorno de simulación;656c96f5-b513-4800-bf5e-ac1e9e498640;n8n-nodes-base.set;3.4;True;detener por defecto;0: Enrutar acción PID;;
+25;Consultar adjudicados R2 pendientes;df167ed9-58fb-4cb4-920b-f7724ad31416;n8n-nodes-base.microsoftSql;1;True;detener por defecto;0: Inicializar contadores;;Nodos SQL/25_Consultar_adjudicados_R2_pendientes.sql
+26;Normalizar fechas de vigencia;aafc81ad-41f0-4969-9aae-2abee78a2831;n8n-nodes-base.code;2;True;detener por defecto;0: Generar propuesta mensual;Código JavaScript/26_Normalizar_fechas_de_vigencia.js;
+27;Generar resumen y bloqueos de simulación;9a26d8fa-ed6f-434d-b4c2-60c9a3d92e0b;n8n-nodes-base.code;2;True;detener por defecto;0: ¿Faltan datos para crear PID?;Código JavaScript/27_Generar_resumen_y_bloqueos_de_simulacion.js;
+28;Loop Over Items;409e7254-25b9-4030-b34c-4ab5e394d394;n8n-nodes-base.splitInBatches;3;True;detener por defecto;"0: Consolidar métricas del proceso; 1: Configurar entorno de simulación";;
+29;Calcular siguiente informe mensual;8989b41f-cf4a-4d81-8203-713781177319;n8n-nodes-base.code;2;True;detener por defecto;0: ¿Alcanzó fin de proyecto?;Código JavaScript/29_Calcular_siguiente_informe_mensual.js;
+30;Obtener último informe;df02ef3d-60c6-4702-8b00-a922deb3b186;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Calcular siguiente informe mensual;;Nodos SQL/30_Obtener_ultimo_informe.sql
+31;¿Alcanzó fin de proyecto?;706065af-bfc6-429a-b68f-e26419508515;n8n-nodes-base.if;2.3;True;detener por defecto;"0: Registrar plan completado; 1: Microsoft SQL";;
+32;Registrar plan completado;be5edefe-b6e2-4b45-843c-489732ed0e9d;n8n-nodes-base.code;2;True;detener por defecto;0: Loop Over Items;Código JavaScript/32_Registrar_plan_completado.js;
+33;Microsoft SQL;a439d50c-d417-485e-a65d-1ec14f5267c8;n8n-nodes-base.microsoftSql;1.1;True;detener por defecto;0: Loop Over Items;;Nodos SQL/33_Microsoft_SQL.sql
+34;Consolidar métricas del proceso;76013ae0-4c71-49d5-8c34-d1439d701559;n8n-nodes-base.code;2;True;detener por defecto;0: Enviar correo confirmación simulación;Código JavaScript/34_Consolidar_metricas_del_proceso.js;
+35;Enviar correo confirmación simulación;a57b2231-ab14-4e95-8285-7121d4892f5f;n8n-nodes-base.executeWorkflow;1.3;True;detener por defecto;;;
+36;Inicializar contadores;3957a228-adc0-46dc-ba05-965daa09399b;n8n-nodes-base.code;2;True;detener por defecto;0: Loop Over Items;Código JavaScript/36_Inicializar_contadores.js;
+37;Sumar Creado;2201c5a4-4d2f-467c-b50a-5f4e1ad0f95e;n8n-nodes-base.code;2;False;detener por defecto;0: Loop Over Items;Código JavaScript/37_Sumar_Creado.js;
+38;Sumar alerta;ce93956d-7ff9-4af9-87be-a6fa9edeab9d;n8n-nodes-base.code;2;False;detener por defecto;0: Enviar correo alerta PID incompleto;Código JavaScript/38_Sumar_alerta.js;
+39;Sumar corregido;cbc5fd0e-addd-4a47-a5c9-6ea2cea8e8aa;n8n-nodes-base.code;2;True;detener por defecto;0: Loop Over Items;Código JavaScript/39_Sumar_corregido.js;

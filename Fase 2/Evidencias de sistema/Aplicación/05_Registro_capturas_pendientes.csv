@@ -1,0 +1,9 @@
+﻿ID;Evidencia requerida;Relación;Estado;Archivo real;ID ejecución;Fecha real;Responsable
+CAP-01;Lienzo n8n con 39 nodos;HU-18;Pendiente;;;;Equipo
+CAP-02;Hora 07:00 y zona configurada;HU-02 / CP-23;Pendiente;;;;Equipo
+CAP-03;Creación simulada con entrada ficticia;HU-11;Pendiente;;;;Equipo
+CAP-04;Corrección pendiente sin escritura;HU-12;Pendiente;;;;Equipo
+CAP-05;Bloqueo por fecha o calendario faltante;HU-08 / CP-17;Pendiente;;;;Equipo
+CAP-06;Proyecto sin cambios retorna al bucle;HU-16 / CP-21;Pendiente;;;;Equipo
+CAP-07;Resumen final conciliado;HU-15 / CP-22;Pendiente;;;;Equipo
+CAP-08;Correo recibido en destinatario de prueba;HU-14 / CP-25;Pendiente;;;;Equipo

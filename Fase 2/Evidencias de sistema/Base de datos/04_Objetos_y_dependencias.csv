@@ -1,0 +1,10 @@
+﻿Objeto;Uso en el flujo;Datos o función;Estado verificable
+PROYECTOS_X;Consulta;Código, versión, estado, categoría y vigencia;Tipo tabla/vista y clave física no confirmados
+PROYECTO_VERSIONES;Consulta;Fechas oficiales por código y versión;Unicidad y nulabilidad por verificar
+PROYECTO_INFORME;Consulta y escritura prevista;Número, tipo, estado, corte y entrega;"INS/UPD comentados; identidad lógica proyecto+versión+número"
+PROYECTOS_AFECTOS_R2;Consulta;Marca R2 por código;Cardinalidad y unicidad no verificadas
+PROYECTO_SITUACION;Consulta;Semáforo 27 y finalización;Revisar múltiples registros del tipo 27
+TIPO_INFORME;Consulta;Catálogo de tipos e indicadores;Referencia inf_tipo a tpi_codigo inferida del JOIN
+CALENDARIO;Consulta;FECHA y ES_HABIL;Cobertura y unicidad por día pendientes
+INS_PROYECTO_INFORME;Procedimiento previsto;Crear informe;"Llamada comentada; definición y contrato no disponibles"
+UPD_PROYECTO_INFORME;Procedimiento previsto;Corregir informe;"Llamada comentada; definición y contrato no disponibles"

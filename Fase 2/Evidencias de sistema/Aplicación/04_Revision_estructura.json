@@ -1,0 +1,22 @@
+{
+  "fecha_revision": "2026-10-21",
+  "integrantes": [
+    "Ociel Escobar",
+    "Sebastian Torres"
+  ],
+  "sha256_fuente": "d89786062885bc5dc4177e1f6c8d101a12097632a87b883ac3f06de5f521deb1",
+  "nodos": 39,
+  "nodos_sql": 9,
+  "nodos_javascript": 14,
+  "conexiones": 45,
+  "nombres_duplicados": [],
+  "origenes_inexistentes": [],
+  "destinos_inexistentes": [],
+  "campos_globales_presentes": [
+    "nodes",
+    "connections",
+    "pinData",
+    "meta"
+  ],
+  "alcance": "Revisión estructural local del fragmento; no valida n8n, SQL, permisos ni correo."
+}
